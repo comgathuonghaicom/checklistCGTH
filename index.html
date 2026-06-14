@@ -6,6 +6,9 @@
 
 <title>Checklist Kiểm Tra</title>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
 <style>
 
 body{
@@ -22,14 +25,6 @@ body{
     padding:20px;
     border-radius:10px;
 }
-.container{
-    overflow-x:auto;
-}
-
-table{
-    min-width:900px;
-}
-
 
 h1{
     text-align:center;
@@ -112,7 +107,7 @@ button{
 id="newItem"
 placeholder="Nhập tên hạng mục">
 
-<button onclick="btnAdd" type="button">
+<button onclick="addItem()">
 ➕ Thêm hạng mục
 </button>
 
@@ -169,60 +164,21 @@ Không đạt:
 
 <script>
 
+document.getElementById("checkDate").value =
+new Date().toISOString().split('T')[0];
+
 let counter = 0;
 
-document.addEventListener("DOMContentLoaded", function(){
-
-    const dateInput =
-        document.getElementById("checkDate");
-
-    if(dateInput){
-
-        const today = new Date();
-
-        const yyyy = today.getFullYear();
-        const mm = String(today.getMonth()+1).padStart(2,'0');
-        const dd = String(today.getDate()).padStart(2,'0');
-
-        dateInput.value = `${yyyy}-${mm}-${dd}`;
-    }
-
-    addItem("Kiểm tra PCCC");
-    addItem("Kiểm tra đèn");
-    addItem("Kiểm tra vệ sinh");
-
-    document
-    .getElementById("btnAdd")
-    .addEventListener("click", function(){
-
-        const txt =
-        document.getElementById("newItem");
-
-        addItem(txt.value);
-
-        txt.value = "";
-
-    });
-
-});
-
-function addItem(text){
+function addItem(text=''){
 
     counter++;
 
-    if(!text || text.trim()===""){
-        text = "Hạng mục mới";
-    }
+    const tr=document.createElement('tr');
 
-    const tbody =
-    document.getElementById("checklistBody");
-
-    const tr =
-    document.createElement("tr");
-
-    tr.innerHTML = `
+    tr.innerHTML=`
         <td>
-            <input type="text" value="${text}">
+            <input type="text"
+                   value="${text}">
         </td>
 
         <td align="center">
@@ -242,134 +198,178 @@ function addItem(text){
         </td>
 
         <td>
-            <input type="file"
+<input type="file"
                    accept="image/*"
                    capture="environment"
-                   onchange="previewImage(this)">
+                   onchange="preview(this)">
             <br>
-            <img class="preview"
-                 style="max-width:100px;">
+            <img class="preview">
         </td>
 
-        <td>
-            <button type="button"
-                    onclick="deleteRow(this)">
-                ❌
+        <td align="center">
+            <button onclick="removeRow(this)">
+            ❌
             </button>
         </td>
     `;
 
-    tbody.appendChild(tr);
+    document
+    .getElementById("checklistBody")
+    .appendChild(tr);
+
+    document
+    .getElementById("newItem")
+    .value='';
 }
 
-function deleteRow(btn){
-
-    btn.closest("tr").remove();
-
+function removeRow(btn){
+    btn.closest('tr').remove();
     updateSummary();
 }
 
-function previewImage(input){
+function preview(input){
 
     if(input.files.length){
 
-        const img =
-        input.parentElement.querySelector("img");
+        const img=
+        input.parentElement
+             .querySelector("img");
 
-        img.src =
+        img.src=
         URL.createObjectURL(
-            input.files[0]
-        );
+        input.files[0]);
     }
 }
 
 function updateSummary(){
 
-    let pass = 0;
-    let fail = 0;
+    let pass=0;
+    let fail=0;
 
     document
     .querySelectorAll("#checklistBody tr")
-    .forEach(function(row){
+    .forEach(row=>{
 
-        const radios =
+        const radios=
         row.querySelectorAll(
-        "input[type='radio']");
+        "input[type=radio]");
 
-        if(radios[0].checked){
+        if(radios[0].checked)
             pass++;
-        }
 
-        if(radios[1].checked){
+        if(radios[1].checked)
             fail++;
-        }
-
     });
 
-    document.getElementById("passCount")
-    .textContent = pass;
-
-    document.getElementById("failCount")
-    .textContent = fail;
+    passCount.innerText=pass;
+    failCount.innerText=fail;
 }
 
 function saveTemplate(){
 
-    const items = [];
+    let items=[];
 
     document
-    .querySelectorAll("#checklistBody tr")
-    .forEach(function(row){
+    .querySelectorAll(
+    "#checklistBody tr")
+    .forEach(row=>{
 
         items.push(
-            row.querySelector("td input")
-            .value
-        );
-});
+        row.querySelector(
+        "td:first-child input")
+        .value);
+    });
 
     localStorage.setItem(
-        "checklistTemplate",
-        JSON.stringify(items)
-    );
+    "checklistTemplate",
+    JSON.stringify(items));
 
     alert("Đã lưu mẫu");
 }
 
 function loadTemplate(){
 
-    const data =
+    let data=
     localStorage.getItem(
-        "checklistTemplate"
-    );
+    "checklistTemplate");
 
     if(!data){
-
-        alert("Không tìm thấy mẫu");
-
+        alert("Chưa có mẫu");
         return;
     }
 
-    document.getElementById(
-        "checklistBody"
-    ).innerHTML = "";
+    checklistBody.innerHTML='';
 
     JSON.parse(data)
-    .forEach(function(item){
+    .forEach(item=>{
 
         addItem(item);
-
     });
 }
 
-function exportPDF(){
+async function exportPDF(){
 
-    alert(
-    "Bản offline không dùng CDN nên chưa xuất PDF.\n\nTrước tiên hãy kiểm tra xem iPhone có thêm hạng mục được chưa."
-    );
+    const report=
+    document.getElementById(
+    "report");
+
+    const canvas=
+    await html2canvas(
+    report,{
+        scale:2
+    });
+
+    const imgData=
+    canvas.toDataURL(
+    'image/jpeg',1.0);
+
+    const {jsPDF}=window.jspdf;
+
+    const pdf=
+    new jsPDF(
+    'p',
+    'mm',
+    'a4');
+
+    const width=
+    210;
+
+    const height=
+    canvas.height *
+    width /
+    canvas.width;
+
+    pdf.addImage(
+    imgData,
+    'JPEG',
+    0,
+    0,
+    width,
+    height);
+
+    pdf.save(
+    'Checklist.pdf');
+}
+
+document
+.getElementById("newItem")
+.addEventListener(
+'keypress',
+function(e){
+
+if(e.key==='Enter'){
+
+    addItem(this.value);
 
 }
+});
+
+addItem("Kiểm tra PCCC");
+addItem("Kiểm tra đèn");
+addItem("Kiểm tra vệ sinh");
 
 </script>
 
 </body>
 </html>
+

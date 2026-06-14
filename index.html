@@ -1,1 +1,375 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Checklist Kiểm Tra</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<style>
+
+body{
+    font-family:Arial,sans-serif;
+    background:#f2f2f2;
+    margin:0;
+    padding:20px;
+}
+
+.container{
+    max-width:1200px;
+    margin:auto;
+    background:white;
+    padding:20px;
+    border-radius:10px;
+}
+
+h1{
+    text-align:center;
+}
+
+.row{
+    margin-bottom:10px;
+}
+
+input[type=text],
+textarea{
+    width:100%;
+    padding:8px;
+    box-sizing:border-box;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:15px;
+}
+
+th,td{
+    border:1px solid #ccc;
+    padding:8px;
+}
+
+th{
+    background:#eee;
+}
+
+button{
+    padding:8px 15px;
+    margin:5px;
+    cursor:pointer;
+}
+
+.preview{
+    max-width:120px;
+    max-height:120px;
+}
+
+.summary{
+    margin-top:15px;
+    font-weight:bold;
+}
+
+@media print{
+    button{
+        display:none;
+    }
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div id="report">
+
+<h1>CHECKLIST KIỂM TRA</h1>
+
+<div class="row">
+<label>Nhân viên:</label>
+<input type="text" id="employee">
+</div>
+
+<div class="row">
+<label>Ngày kiểm tra:</label>
+<input type="date" id="checkDate">
+</div>
+
+<hr>
+
+<h3>Danh sách hạng mục</h3>
+
+<input type="text"
+id="newItem"
+placeholder="Nhập tên hạng mục">
+
+<button onclick="addItem()">
+➕ Thêm hạng mục
+</button>
+
+<table>
+
+<thead>
+<tr>
+<th width="20%">Hạng mục</th>
+<th width="8%">Đạt</th>
+<th width="10%">Không đạt</th>
+<th width="25%">Ghi chú</th>
+<th width="25%">Ảnh</th>
+<th width="5%">Xóa</th>
+</tr>
+</thead>
+
+<tbody id="checklistBody">
+</tbody>
+
+</table>
+
+<div class="summary">
+Đạt:
+<span id="passCount">0</span>
+
+|
+
+Không đạt:
+<span id="failCount">0</span>
+</div>
+
+<br>
+
+<label>Ghi chú chung:</label>
+<textarea rows="4"></textarea>
+
+</div>
+
+<hr>
+
+<button onclick="saveTemplate()">
+💾 Lưu mẫu
+</button>
+
+<button onclick="loadTemplate()">
+📂 Tải mẫu
+</button>
+
+<button onclick="exportPDF()">
+📄 Xuất PDF
+</button>
+
+</div>
+
+<script>
+
+document.getElementById("checkDate").value =
+new Date().toISOString().split('T')[0];
+
+let counter = 0;
+
+function addItem(text=''){
+
+    counter++;
+
+    const tr=document.createElement('tr');
+
+    tr.innerHTML=`
+        <td>
+            <input type="text"
+                   value="${text}">
+        </td>
+
+        <td align="center">
+            <input type="radio"
+                   name="status${counter}"
+                   onchange="updateSummary()">
+        </td>
+
+        <td align="center">
+            <input type="radio"
+                   name="status${counter}"
+                   onchange="updateSummary()">
+        </td>
+
+        <td>
+            <textarea rows="2"></textarea>
+        </td>
+
+        <td>
+<input type="file"
+                   accept="image/*"
+                   capture="environment"
+                   onchange="preview(this)">
+            <br>
+            <img class="preview">
+        </td>
+
+        <td align="center">
+            <button onclick="removeRow(this)">
+            ❌
+            </button>
+        </td>
+    `;
+
+    document
+    .getElementById("checklistBody")
+    .appendChild(tr);
+
+    document
+    .getElementById("newItem")
+    .value='';
+}
+
+function removeRow(btn){
+    btn.closest('tr').remove();
+    updateSummary();
+}
+
+function preview(input){
+
+    if(input.files.length){
+
+        const img=
+        input.parentElement
+             .querySelector("img");
+
+        img.src=
+        URL.createObjectURL(
+        input.files[0]);
+    }
+}
+
+function updateSummary(){
+
+    let pass=0;
+    let fail=0;
+
+    document
+    .querySelectorAll("#checklistBody tr")
+    .forEach(row=>{
+
+        const radios=
+        row.querySelectorAll(
+        "input[type=radio]");
+
+        if(radios[0].checked)
+            pass++;
+
+        if(radios[1].checked)
+            fail++;
+    });
+
+    passCount.innerText=pass;
+    failCount.innerText=fail;
+}
+
+function saveTemplate(){
+
+    let items=[];
+
+    document
+    .querySelectorAll(
+    "#checklistBody tr")
+    .forEach(row=>{
+
+        items.push(
+        row.querySelector(
+        "td:first-child input")
+        .value);
+    });
+
+    localStorage.setItem(
+    "checklistTemplate",
+    JSON.stringify(items));
+
+    alert("Đã lưu mẫu");
+}
+
+function loadTemplate(){
+
+    let data=
+    localStorage.getItem(
+    "checklistTemplate");
+
+    if(!data){
+        alert("Chưa có mẫu");
+        return;
+    }
+
+    checklistBody.innerHTML='';
+
+    JSON.parse(data)
+    .forEach(item=>{
+
+        addItem(item);
+    });
+}
+
+async function exportPDF(){
+
+    const report=
+    document.getElementById(
+    "report");
+
+    const canvas=
+    await html2canvas(
+    report,{
+        scale:2
+    });
+
+    const imgData=
+    canvas.toDataURL(
+    'image/jpeg',1.0);
+
+    const {jsPDF}=window.jspdf;
+
+    const pdf=
+    new jsPDF(
+    'p',
+    'mm',
+    'a4');
+
+    const width=
+    210;
+
+    const height=
+    canvas.height *
+    width /
+    canvas.width;
+
+    pdf.addImage(
+    imgData,
+    'JPEG',
+    0,
+    0,
+    width,
+    height);
+
+    pdf.save(
+    'Checklist.pdf');
+}
+
+document
+.getElementById("newItem")
+.addEventListener(
+'keypress',
+function(e){
+
+if(e.key==='Enter'){
+
+    addItem(this.value);
+
+}
+});
+
+addItem("Kiểm tra PCCC");
+addItem("Kiểm tra đèn");
+addItem("Kiểm tra vệ sinh");
+
+</script>
+
+</body>
+</html>
 

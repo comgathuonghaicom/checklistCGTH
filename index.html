@@ -24,6 +24,7 @@ body{
     background:white;
     padding:20px;
     border-radius:10px;
+    overflow-x:auto;
 }
 
 h1{
@@ -45,6 +46,7 @@ table{
     width:100%;
     border-collapse:collapse;
     margin-top:15px;
+    min-width:900px;
 }
 
 th,td{
@@ -363,11 +365,11 @@ if(e.key==='Enter'){
 
 }
 });
-
+window.onload = function(){
 addItem("Kiểm tra PCCC");
 addItem("Kiểm tra đèn");
 addItem("Kiểm tra vệ sinh");
-
+}
 </script>
 
 </body>

@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Checklist Kiểm Tra</title>
+
+<style>
+
+body{
+    font-family:Arial,sans-serif;
+    background:#f2f2f2;
+    margin:0;
+    padding:20px;
+}
+
+.container{
+    max-width:1200px;
+    margin:auto;
+    background:white;
+    padding:20px;
+    border-radius:10px;
+}
+.container{
+    overflow-x:auto;
+}
+
+table{
+    min-width:900px;
+}
+
+
+h1{
+    text-align:center;
+}
+
+.row{
+    margin-bottom:10px;
+}
+
+input[type=text],
+textarea{
+    width:100%;
+    padding:8px;
+    box-sizing:border-box;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:15px;
+}
+
+th,td{
+    border:1px solid #ccc;
+    padding:8px;
+}
+
+th{
+    background:#eee;
+}
+
+button{
+    padding:8px 15px;
+    margin:5px;
+    cursor:pointer;
+}
+
+.preview{
+    max-width:120px;
+    max-height:120px;
+}
+
+.summary{
+    margin-top:15px;
+    font-weight:bold;
+}
+
+@media print{
+    button{
+        display:none;
+    }
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div id="report">
+
+<h1>CHECKLIST KIỂM TRA</h1>
+
+<div class="row">
+<label>Nhân viên:</label>
+<input type="text" id="employee">
+</div>
+
+<div class="row">
+<label>Ngày kiểm tra:</label>
+<input type="date" id="checkDate">
+</div>
+
+<hr>
+
+<h3>Danh sách hạng mục</h3>
+
+<input type="text"
+id="newItem"
+placeholder="Nhập tên hạng mục">
+
+<button onclick="btnAdd" type="button">
+➕ Thêm hạng mục
+</button>
+
+<table>
+
+<thead>
+<tr>
+<th width="20%">Hạng mục</th>
+<th width="8%">Đạt</th>
+<th width="10%">Không đạt</th>
+<th width="25%">Ghi chú</th>
+<th width="25%">Ảnh</th>
+<th width="5%">Xóa</th>
+</tr>
+</thead>
+
+<tbody id="checklistBody">
+</tbody>
+
+</table>
+
+<div class="summary">
+Đạt:
+<span id="passCount">0</span>
+
+|
+
+Không đạt:
+<span id="failCount">0</span>
+</div>
+
+<br>
+
+<label>Ghi chú chung:</label>
+<textarea rows="4"></textarea>
+
+</div>
+
+<hr>
+
+<button onclick="saveTemplate()">
+💾 Lưu mẫu
+</button>
+
+<button onclick="loadTemplate()">
+📂 Tải mẫu
+</button>
+
+<button onclick="exportPDF()">
+📄 Xuất PDF
+</button>
+
+</div>
+
+<script>
+
+let counter = 0;
+
+document.addEventListener("DOMContentLoaded", function(){
+
+    const dateInput =
+        document.getElementById("checkDate");
+
+    if(dateInput){
+
+        const today = new Date();
+
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth()+1).padStart(2,'0');
+        const dd = String(today.getDate()).padStart(2,'0');
+
+        dateInput.value = `${yyyy}-${mm}-${dd}`;
+    }
+
+    addItem("Kiểm tra PCCC");
+    addItem("Kiểm tra đèn");
+    addItem("Kiểm tra vệ sinh");
+
+    document
+    .getElementById("btnAdd")
+    .addEventListener("click", function(){
+
+        const txt =
+        document.getElementById("newItem");
+
+        addItem(txt.value);
+
+        txt.value = "";
+
+    });
+
+});
+
+function addItem(text){
+
+    counter++;
+
+    if(!text || text.trim()===""){
+        text = "Hạng mục mới";
+    }
+
+    const tbody =
+    document.getElementById("checklistBody");
+
+    const tr =
+    document.createElement("tr");
+
+    tr.innerHTML = `
+        <td>
+            <input type="text" value="${text}">
+        </td>
+
+        <td align="center">
+            <input type="radio"
+                   name="status${counter}"
+                   onchange="updateSummary()">
+        </td>
+
+        <td align="center">
+            <input type="radio"
+                   name="status${counter}"
+                   onchange="updateSummary()">
+        </td>
+
+        <td>
+            <textarea rows="2"></textarea>
+        </td>
+
+        <td>
+            <input type="file"
+                   accept="image/*"
+                   capture="environment"
+                   onchange="previewImage(this)">
+            <br>
+            <img class="preview"
+                 style="max-width:100px;">
+        </td>
+
+        <td>
+            <button type="button"
+                    onclick="deleteRow(this)">
+                ❌
+            </button>
+        </td>
+    `;
+
+    tbody.appendChild(tr);
+}
+
+function deleteRow(btn){
+
+    btn.closest("tr").remove();
+
+    updateSummary();
+}
+
+function previewImage(input){
+
+    if(input.files.length){
+
+        const img =
+        input.parentElement.querySelector("img");
+
+        img.src =
+        URL.createObjectURL(
+            input.files[0]
+        );
+    }
+}
+
+function updateSummary(){
+
+    let pass = 0;
+    let fail = 0;
+
+    document
+    .querySelectorAll("#checklistBody tr")
+    .forEach(function(row){
+
+        const radios =
+        row.querySelectorAll(
+        "input[type='radio']");
+
+        if(radios[0].checked){
+            pass++;
+        }
+
+        if(radios[1].checked){
+            fail++;
+        }
+
+    });
+
+    document.getElementById("passCount")
+    .textContent = pass;
+
+    document.getElementById("failCount")
+    .textContent = fail;
+}
+
+function saveTemplate(){
+
+    const items = [];
+
+    document
+    .querySelectorAll("#checklistBody tr")
+    .forEach(function(row){
+
+        items.push(
+            row.querySelector("td input")
+            .value
+        );
+});
+
+    localStorage.setItem(
+        "checklistTemplate",
+        JSON.stringify(items)
+    );
+
+    alert("Đã lưu mẫu");
+}
+
+function loadTemplate(){
+
+    const data =
+    localStorage.getItem(
+        "checklistTemplate"
+    );
+
+    if(!data){
+
+        alert("Không tìm thấy mẫu");
+
+        return;
+    }
+
+    document.getElementById(
+        "checklistBody"
+    ).innerHTML = "";
+
+    JSON.parse(data)
+    .forEach(function(item){
+
+        addItem(item);
+
+    });
+}
+
+function exportPDF(){
+
+    alert(
+    "Bản offline không dùng CDN nên chưa xuất PDF.\n\nTrước tiên hãy kiểm tra xem iPhone có thêm hạng mục được chưa."
+    );
+
+}
+
+</script>
+
+</body>
+</html>
